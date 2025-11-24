@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';   // 🔥 required for Render backend
 import Chat from './models/Chat.js';
 
 dotenv.config();
@@ -10,17 +11,20 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "*",   // Allow Vercel frontend
+  methods: "GET,POST,DELETE",
+}));
 app.use(express.json());
 
-// Database Connection
+// ---------------- DATABASE -----------------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB Atlas'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-// --- ROUTES ---
+// ---------------- ROUTES ------------------
 
-// 1. Get Chats for a User
+// Get chat history
 app.get('/api/chats/:userId', async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.params.userId }).sort({ createdAt: 1 });
@@ -30,7 +34,7 @@ app.get('/api/chats/:userId', async (req, res) => {
   }
 });
 
-// 2. Add a Message (Save to DB)
+// Save message
 app.post('/api/chats', async (req, res) => {
   try {
     const newChat = new Chat(req.body);
@@ -41,7 +45,7 @@ app.post('/api/chats', async (req, res) => {
   }
 });
 
-// 3. Clear History
+// Clear history
 app.delete('/api/chats/:userId', async (req, res) => {
   try {
     await Chat.deleteMany({ userId: req.params.userId });
@@ -51,20 +55,21 @@ app.delete('/api/chats/:userId', async (req, res) => {
   }
 });
 
-// 4. Chat with AI (SECURE BACKEND PROXY)
+// ---------------- AI CHAT ROUTE -----------------
 app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
-  const apiKey = process.env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;   // 🔥 important change
 
   if (!apiKey) {
-    console.error("❌ Server Error: GEMINI_API_KEY is missing in .env");
-    return res.status(500).json({ error: "Server configuration error: Missing API Key" });
+    return res.status(500).json({ error: "GEMINI_API_KEY missing in backend .env" });
   }
 
   try {
-    console.log("🤖 Backend sending to Gemini:", text);
-    
-    const promptWithInstructions = `You are a helpful assistant. Please answer the following input politely and formally. Keep your answer strict and short, within 2-3 lines max. \n\nInput: ${text}`;
+    const prompt = `
+      You are a helpful assistant. 
+      Reply very politely in 2–3 lines max.
+      User: ${text}
+    `;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -72,32 +77,24 @@ app.post('/api/chat-ai', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptWithInstructions }] }]
+          contents: [{ parts: [{ text: prompt }] }]
         })
       }
     );
 
-    if (!response.ok) {
-       const errorData = await response.json().catch(() => ({}));
-       throw new Error(`Gemini API Error: ${errorData.error?.message || response.statusText}`);
-    }
-
     const data = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0) {
-        return res.json({ text: "I didn't understand that." });
-    }
 
-    const aiText = data.candidates[0].content.parts[0].text;
-    console.log("✅ Backend received AI response");
-    
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
+                   "Sorry, I couldn't understand that.";
+
     res.json({ text: aiText });
 
   } catch (error) {
-    console.error("❌ Backend AI Error:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Start Server
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);
