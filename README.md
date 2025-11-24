@@ -1,16 +1,73 @@
-# React + Vite
+AI Voice Assistant Bot
+A full-stack Voice Assistant application capable of listening to speech, processing natural language using Google's Gemini AI, and responding with spoken audio.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Tech Stack:
 
-Currently, two official plugins are available:
+Frontend: React + Vite, Tailwind CSS
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Backend: Node.js, Express.js
 
-## React Compiler
+Database: MongoDB Atlas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+AI: Google Gemini 1.5 Flash
 
-## Expanding the ESLint configuration
+APIs: Web Speech API (Text-to-Speech & Speech-to-Text)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🚀 Features
+🎙️ Voice Interaction: Speak to the bot and hear it speak back.
+
+🧠 Smart AI: Powered by Google Gemini for intelligent, context-aware responses.
+
+🌗 Dark Mode UI: A modern, responsive chat interface.
+
+📊 Dashboard: Analytics for tracking user engagement.
+
+⚙️ Settings: Adjustable voice speed and pitch.
+
+🛠️ Installation & Setup
+This project has two parts: the Client (Frontend) and the Server (Backend). You need to run both.
+
+1. Server Setup (Backend)
+Navigate to the server folder:
+
+cd server
+Install dependencies:
+
+npm install
+Create a .env file in the server/ folder:
+
+MONGODB_URI=your_mongodb_connection_string
+GEMINI_API_KEY=your_google_gemini_api_key
+PORT=5000
+Start the server:
+
+npm start
+The server should run on http://localhost:5000
+
+2. Client Setup (Frontend)
+Open a new terminal and navigate to the root folder:
+
+cd voice-bot
+Install dependencies:
+
+npm install
+Start the React app:
+
+npm run dev
+Open the link shown in the terminal (usually http://localhost:5173).
+
+⚠️ Troubleshooting
+"Network Error" / "Processing..." forever:
+
+Ensure the Backend Server is running (npm start inside server/).
+
+Check the .env file in server/ has the correct GEMINI_API_KEY.
+
+Microphone not working:
+
+Ensure you have granted microphone permissions in your browser.
+
+Check if your browser supports the Web Speech API (Chrome/Edge recommended).
+
+📄 License
+This project is open source and available for educational purposes.
