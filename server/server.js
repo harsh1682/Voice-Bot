@@ -3,87 +3,84 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import Chat from './models/Chat.js';
+import fetch from 'node-fetch'; // make sure to install node-fetch
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = [
-  "https://voice-bot-omega-five.vercel.app", // Vercel frontend
-  "https://voice-bot-wheat.vercel.app",
-  "http://localhost:3000"
-];
-
-// Apply CORS for all routes early
+// ------------------ CORS ------------------
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (e.g. curl, Postman)
-    if(!origin) return callback(null, true);
-    if(allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  methods: ["GET", "POST", "DELETE"],
-  credentials: true
+  origin: [
+    "https://voice-bot-omega-five.vercel.app", // frontend deployed URL
+    "http://localhost:3000"
+  ],
+  methods: ["GET", "POST", "DELETE"]
 }));
 
 app.use(express.json());
 
-// Health check
+// ------------------ HEALTH CHECK ------------------
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-// Connect to MongoDB
+// ------------------ DATABASE ------------------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => console.error('MongoDB error:', err));
 
-// API to get chats by userId
+// ------------------ ROUTES ------------------
+// Get all chats for a user
 app.get('/api/chats/:userId', async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.params.userId }).sort({ createdAt: 1 });
     res.json(chats);
   } catch (error) {
-    console.error("Error fetching chats:", error);
-    res.status(500).json({ error: "Failed to fetch chats" });
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// API to post a new chat message
+// Save a chat message
 app.post('/api/chats', async (req, res) => {
   try {
     const newChat = new Chat(req.body);
     const savedChat = await newChat.save();
     res.status(201).json(savedChat);
   } catch (error) {
-    console.error("Error saving chat:", error);
+    console.error(error);
     res.status(400).json({ error: error.message });
   }
 });
 
-// API to delete chats by userId
+// Delete all chats for a user
 app.delete('/api/chats/:userId', async (req, res) => {
   try {
     await Chat.deleteMany({ userId: req.params.userId });
     res.json({ message: "History cleared" });
   } catch (error) {
-    console.error("Error deleting chats:", error);
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// AI route (unchanged)
+// ------------------ AI ROUTE ------------------
 app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
   const apiKey = process.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey) {
+    console.error("GEMINI_API_KEY is missing!");
     return res.status(500).json({ error: "GEMINI_API_KEY missing" });
   }
+
+  if (!text || text.trim() === "") {
+    return res.status(400).json({ error: "No text provided" });
+  }
+
+  console.log("Received text for AI:", text);
 
   try {
     const response = await fetch(
@@ -93,11 +90,19 @@ app.post('/api/chat-ai', async (req, res) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text }] }]
-        })
+        }),
+        timeout: 15000 // 15s timeout
       }
     );
 
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Gemini API error:", response.status, errText);
+      return res.status(response.status).json({ error: "Gemini API error", details: errText });
+    }
+
     const data = await response.json();
+    console.log("Gemini API response:", data);
 
     const aiText =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
@@ -106,21 +111,12 @@ app.post('/api/chat-ai', async (req, res) => {
     res.json({ text: aiText });
 
   } catch (error) {
-    console.error("AI request error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Failed to fetch from Gemini:", error);
+    res.status(502).json({ error: "Failed to reach Gemini API", details: error.message });
   }
 });
 
-// Generic error handler middleware (to catch CORS and other errors)
-app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err.message);
-  if (err.message.includes('CORS')) {
-    return res.status(403).json({ error: err.message });
-  }
-  res.status(500).json({ error: "Internal Server Error" });
-});
-
-// Start server
+// ------------------ SERVER START ------------------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
