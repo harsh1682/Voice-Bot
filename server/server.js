@@ -62,7 +62,7 @@ app.delete('/api/chats/:userId', async (req, res) => {
 // ------------------ AI ROUTE ------------------
 app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: "GEMINI_API_KEY missing" });
@@ -70,7 +70,7 @@ app.post('/api/chat-ai', async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
