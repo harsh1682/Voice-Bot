@@ -1,5 +1,6 @@
-// Use your Render backend, NOT localhost
-const API_URL = 'https://voice-bot-p1kr.onrender.com/api/chat-ai';
+// File: /mnt/data/3de65d9c-12f7-4c7c-a786-76fcdb010fab.png (original botLogic.js path)
+
+const API_URL = 'https://voice-bot-1-t1ys.onrender.com/api/chat-ai';
 
 export const generateBotResponse = async (input) => {
   try {
