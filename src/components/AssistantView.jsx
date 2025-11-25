@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, Bot, Trash2, Cpu, AlertCircle } from 'lucide-react';
+import { Mic, MicOff, Send, Trash2, Cpu, AlertCircle } from 'lucide-react';
 import { generateBotResponse } from '../utils/botLogic';
 import { speakText, useSpeechRecognition, cancelSpeech } from '../utils/helpers';
 
-// -----------------------------------------------------------------------------
-// 🔥 IMPORTANT: USE YOUR RENDER BACKEND URL (NO MORE LOCALHOST)
-// -----------------------------------------------------------------------------
-const API_URL = 'https://voice-bot-p1kr.onrender.com/api/chats';
-const AI_URL  = 'https://voice-bot-p1kr.onrender.com/api/chat-ai';
+// 🔥 IMPORTANT: USE YOUR RENDER BACKEND URL
+const API_URL = 'https://voice-bot-1-t1ys.onrender.com/api/chats';
 
 const AssistantView = ({ user, settings }) => {
   const [messages, setMessages] = useState([]);
@@ -65,14 +62,7 @@ const AssistantView = ({ user, settings }) => {
 
     try {
       // ------------------- AI RESPONSE VIA BACKEND -------------------
-      const aiResponse = await fetch(AI_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: messageText })
-      });
-
-      const aiData = await aiResponse.json();
-      const botText = aiData.text || "Sorry, I couldn't understand.";
+      const botText = await generateBotResponse(messageText);
 
       speakText(botText, settings);
 
