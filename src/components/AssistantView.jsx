@@ -4,7 +4,7 @@ import { generateBotResponse } from '../utils/botLogic';
 import { speakText, useSpeechRecognition, cancelSpeech } from '../utils/helpers';
 
 // 🔥 IMPORTANT: USE YOUR RENDER BACKEND URL
-const API_URL = 'https://voice-bot-1-t1ys.onrender.com/api/chats';
+const API_URL = 'https://voice-bot-1-t1ys.onrender.com';
 
 const AssistantView = ({ user, settings }) => {
   const [messages, setMessages] = useState([]);
