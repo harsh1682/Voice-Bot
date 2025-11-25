@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Send, Trash2, Cpu, AlertCircle } from 'lucide-react';
-import { generateBotResponse } from '../utils/botLogic';
 import { speakText, useSpeechRecognition, cancelSpeech } from '../utils/helpers';
 
-// 🔥 RENDER BACKEND URL
 const API_URL = 'https://voice-bot-1-t1ys.onrender.com';
 
 const AssistantView = ({ user, settings }) => {
@@ -11,7 +9,7 @@ const AssistantView = ({ user, settings }) => {
   const [inputBuffer, setInputBuffer] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
-  
+
   const messagesEndRef = useRef(null);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition();
 
@@ -31,13 +29,9 @@ const AssistantView = ({ user, settings }) => {
 
   useEffect(() => { fetchChats(); }, [user]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, transcript, isProcessing]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, transcript, isProcessing]);
 
-  useEffect(() => {
-    if (transcript) setInputBuffer(transcript);
-  }, [transcript]);
+  useEffect(() => { if (transcript) setInputBuffer(transcript); }, [transcript]);
 
   useEffect(() => {
     if (!isListening && transcript.trim() !== "" && !isProcessing) {
@@ -60,13 +54,17 @@ const AssistantView = ({ user, settings }) => {
 
     try {
       // ------------------- AI RESPONSE -------------------
-      const botText = await generateBotResponse(messageText);
+      const res = await fetch(`${API_URL}/api/chat-ai`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: messageText })
+      });
+      const data = await res.json();
+      const botText = data.text;
+
       speakText(botText, settings);
 
-      const tempBotMsg = { _id: Date.now() + 1, text: botText, sender: 'bot' };
-      setMessages(prev => [...prev, tempBotMsg]); // Add bot message immediately
-
-      // ------------------- SAVE USER & BOT MESSAGES -------------------
+      // ------------------- SAVE TO DB -------------------
       await fetch(`${API_URL}/api/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,6 +77,7 @@ const AssistantView = ({ user, settings }) => {
         body: JSON.stringify({ userId: user.uid, text: botText, sender: 'bot' })
       });
 
+      fetchChats();
     } catch (error) {
       console.error("Send Error:", error);
       setErrorMessage("Connection Error: Could not reach server.");
@@ -104,7 +103,6 @@ const AssistantView = ({ user, settings }) => {
     } catch (err) { alert("Failed to delete history."); }
   };
 
-  // ------------------- UI -------------------
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6 pb-64 scrollbar-hide w-full max-w-5xl mx-auto">
@@ -120,7 +118,9 @@ const AssistantView = ({ user, settings }) => {
         {messages.map((msg, idx) => (
           <div key={msg._id || idx} className={`flex w-full animate-message ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3 shadow-md text-sm md:text-base leading-relaxed ${
-              msg.sender === 'user' ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-br-sm' : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-sm'
+              msg.sender === 'user'
+                ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-br-sm'
+                : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-sm'
             }`}>
               {msg.text}
             </div>
@@ -132,27 +132,6 @@ const AssistantView = ({ user, settings }) => {
             <div className="bg-red-900/80 border border-red-500/50 text-red-100 px-4 py-3 rounded-xl text-center max-w-md shadow-lg backdrop-blur-sm">
               <AlertCircle className="w-5 h-5 inline mr-2" />
               {errorMessage}
-            </div>
-          </div>
-        )}
-
-        {isProcessing && (
-          <div className="flex w-full justify-start">
-            <div className="bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl flex items-center gap-2">
-              <span className="text-xs text-indigo-400 font-mono">AI THINKING</span>
-              <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-100"></div>
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-200"></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {isListening && (
-          <div className="flex w-full justify-end">
-            <div className="max-w-[85%] rounded-2xl px-5 py-3 bg-indigo-900/30 border border-indigo-500/30 text-indigo-200 backdrop-blur-sm">
-              {transcript || "Listening..."}
             </div>
           </div>
         )}
