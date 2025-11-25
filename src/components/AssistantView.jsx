@@ -19,7 +19,7 @@ const AssistantView = ({ user, settings }) => {
   const fetchChats = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`${API_URL}/${user.uid}`);
+      const res = await fetch(`${API_URL}/api/chats/${user.uid}`);
       if (!res.ok) throw new Error("Failed to fetch chats");
       const data = await res.json();
       setMessages(data);
