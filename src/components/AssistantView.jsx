@@ -3,7 +3,7 @@ import { Mic, MicOff, Send, Bot, Trash2, Cpu, AlertCircle } from 'lucide-react';
 import { generateBotResponse } from '../utils/botLogic';
 import { speakText, useSpeechRecognition, cancelSpeech } from '../utils/helpers';
 
-const API_URL = 'http://localhost:5000/api/chats';
+const API_URL = 'https://voice-bot-p1kr.onrender.com/api/chats';
 
 const AssistantView = ({ user, settings }) => {
   const [messages, setMessages] = useState([]);
