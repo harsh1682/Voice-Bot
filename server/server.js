@@ -1,90 +1,89 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import cors from 'cors';
+import bodyParser from 'body-parser';
+import mongoose from 'mongoose';
+import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import Chat from './models/Chat.js';
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ------------------ CORS ------------------
+// ------------------- MIDDLEWARE -------------------
 app.use(cors({
-  origin: [
-    "https://voice-bot-omega-five.vercel.app",
-    "http://localhost:3000"
-  ],
-  methods: ["GET", "POST", "DELETE"]
+  origin: ['https://voice-bot-omega-five.vercel.app'], // frontend URL
 }));
+app.use(bodyParser.json());
 
-app.use(express.json());
+// ------------------- MONGODB -------------------
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("Connected to MongoDB Atlas"))
+  .catch(err => console.error("MongoDB connection error:", err));
 
-// ------------------ HEALTH CHECK ------------------
-app.get("/", (req, res) => {
-  res.send("Backend is running");
+const chatSchema = new mongoose.Schema({
+  userId: String,
+  text: String,
+  sender: String,
+  createdAt: { type: Date, default: Date.now }
 });
 
-// ------------------ DATABASE ------------------
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('MongoDB error:', err));
+const Chat = mongoose.model('Chat', chatSchema);
 
-// ------------------ ROUTES ------------------
+// ------------------- GET USER CHATS -------------------
 app.get('/api/chats/:userId', async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.params.userId }).sort({ createdAt: 1 });
     res.json(chats);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
+// ------------------- POST NEW CHAT -------------------
 app.post('/api/chats', async (req, res) => {
   try {
-    const newChat = new Chat(req.body);
-    const savedChat = await newChat.save();
-    res.status(201).json(savedChat);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+    const { userId, text, sender } = req.body;
+    const newChat = new Chat({ userId, text, sender });
+    await newChat.save();
+    res.json(newChat);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
+// ------------------- DELETE USER CHATS -------------------
 app.delete('/api/chats/:userId', async (req, res) => {
   try {
     await Chat.deleteMany({ userId: req.params.userId });
-    res.json({ message: "History cleared" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ------------------ AI ROUTE (Gemini) ------------------
+// ------------------- AI ROUTE -------------------
 app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
   const apiKey = process.env.VITE_GEMINI_API_KEY;
 
-  if (!apiKey) {
-    return res.status(500).json({ error: "GEMINI_API_KEY missing" });
-  }
+  if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
 
   try {
+    // Prompt only asks for 2-3 concise sentences
+    const prompt = `Answer the following in 2-3 concise sentences. Do NOT give long explanations.\n\nQuestion: ${text}`;
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            { parts: [{ text: `Respond concisely in 2-3 sentences: ${text}` }] }
-          ]
-        })
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       }
     );
 
     const data = await response.json();
 
-    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
                    "Sorry, I couldn't understand.";
 
     res.json({ text: aiText });
@@ -94,7 +93,9 @@ app.post('/api/chat-ai', async (req, res) => {
   }
 });
 
-// ------------------ START SERVER ------------------
+// ------------------- START SERVER -------------------
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Connected to MongoDB Atlas`);
+  console.log(`Available at your primary URL http://localhost:${PORT}`);
 });
