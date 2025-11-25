@@ -9,28 +9,28 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// -------- CORS FIX --------
+// ------------------ CORS FIX ------------------
 app.use(cors({
   origin: [
-    "https://your-frontend.vercel.app",
+    "https://voice-bot-wheat.vercel.app",
     "http://localhost:3000"
   ],
-  methods: ["GET", "POST", "DELETE"],
+  methods: ["GET", "POST", "DELETE"]
 }));
 
 app.use(express.json());
 
-// -------- HEALTH CHECK --------
+// ------------------ HEALTH CHECK ------------------
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-// -------- DATABASE --------
+// ------------------ DATABASE ------------------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('MongoDB error:', err));
 
-// -------- ROUTES --------
+// ------------------ ROUTES ------------------
 app.get('/api/chats/:userId', async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.params.userId }).sort({ createdAt: 1 });
@@ -59,20 +59,20 @@ app.delete('/api/chats/:userId', async (req, res) => {
   }
 });
 
-// -------- AI ROUTE --------
+// ------------------ AI ROUTE ------------------
 app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+    return res.status(500).json({ error: "GEMINI_API_KEY missing" });
   }
 
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
-        method: 'POST',
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text }] }]
@@ -93,7 +93,7 @@ app.post('/api/chat-ai', async (req, res) => {
   }
 });
 
-// -------- START SERVER --------
+// ------------------ SERVER START ------------------
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
