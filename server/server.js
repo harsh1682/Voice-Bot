@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import Chat from './models/Chat.js';
+import fetch from 'node-fetch'; // Required for Render
 
 dotenv.config();
 
@@ -12,10 +13,11 @@ const PORT = process.env.PORT || 5000;
 // ------------------ CORS FIX ------------------
 app.use(cors({
   origin: [
-    "https://voice-bot-wheat.vercel.app",
-    "http://localhost:3000"
+    "https://voice-bot-omega-five.vercel.app", // Vercel frontend
+    "http://localhost:3000"                    // Local frontend
   ],
-  methods: ["GET", "POST", "DELETE"]
+  methods: ["GET", "POST", "DELETE"],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -27,8 +29,8 @@ app.get("/", (req, res) => {
 
 // ------------------ DATABASE ------------------
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('MongoDB error:', err));
+  .then(() => console.log('✅ Connected to MongoDB Atlas'))
+  .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // ------------------ ROUTES ------------------
 app.get('/api/chats/:userId', async (req, res) => {
@@ -62,10 +64,10 @@ app.delete('/api/chats/:userId', async (req, res) => {
 // ------------------ AI ROUTE ------------------
 app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
-  const apiKey = process.env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.VITE_GEMINI_API_KEY; // Stored securely in Render
 
   if (!apiKey) {
-    return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+    return res.status(500).json({ error: "GEMINI_API_KEY missing in backend env" });
   }
 
   try {
