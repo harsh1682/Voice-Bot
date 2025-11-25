@@ -5,49 +5,69 @@ import dotenv from 'dotenv';
 import Chat from './models/Chat.js';
 
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ------------------ CORS ------------------
+// ------------------ CORS FIX ------------------
 app.use(cors({
   origin: [
-    "https://voice-bot-omega-five.vercel.app", // Vercel frontend
+    "https://voice-bot-omega-five.vercel.app",  // Added Vercel frontend URL
+    "https://voice-bot-wheat.vercel.app",
     "http://localhost:3000"
   ],
-  methods: ["GET", "POST", "DELETE"],
-  credentials: true
+  methods: ["GET", "POST", "DELETE"]
 }));
 
 app.use(express.json());
 
+// ------------------ HEALTH CHECK ------------------
+app.get("/", (req, res) => {
+  res.send("Backend is running");
+});
+
+// ------------------ DATABASE ------------------
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch(err => console.error('MongoDB error:', err));
+
 // ------------------ ROUTES ------------------
-app.get("/api/chats/:userId", async (req, res) => {
+app.get('/api/chats/:userId', async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.params.userId }).sort({ createdAt: 1 });
     res.json(chats);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post("/api/chats", async (req, res) => {
+app.post('/api/chats', async (req, res) => {
   try {
-    const chat = new Chat(req.body);
-    const saved = await chat.save();
-    res.status(201).json(saved);
-  } catch (err) { res.status(400).json({ error: err.message }); }
+    const newChat = new Chat(req.body);
+    const savedChat = await newChat.save();
+    res.status(201).json(savedChat);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-app.delete("/api/chats/:userId", async (req, res) => {
+app.delete('/api/chats/:userId', async (req, res) => {
   try {
     await Chat.deleteMany({ userId: req.params.userId });
     res.json({ message: "History cleared" });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// ------------------ AI ------------------
-app.post("/api/chat-ai", async (req, res) => {
+// ------------------ AI ROUTE ------------------
+app.post('/api/chat-ai', async (req, res) => {
   const { text } = req.body;
   const apiKey = process.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+
+  if (!apiKey) {
+    return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+  }
 
   try {
     const response = await fetch(
@@ -55,13 +75,26 @@ app.post("/api/chat-ai", async (req, res) => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text }] }] })
+        body: JSON.stringify({
+          contents: [{ parts: [{ text }] }]
+        })
       }
     );
+
     const data = await response.json();
-    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't understand.";
+
+    const aiText =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Sorry, I couldn't understand.";
+
     res.json({ text: aiText });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// ------------------ SERVER START ------------------
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
