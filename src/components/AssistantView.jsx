@@ -61,8 +61,10 @@ const AssistantView = ({ user, settings }) => {
     try {
       // ------------------- AI RESPONSE -------------------
       const botText = await generateBotResponse(messageText);
-
       speakText(botText, settings);
+
+      const tempBotMsg = { _id: Date.now() + 1, text: botText, sender: 'bot' };
+      setMessages(prev => [...prev, tempBotMsg]); // Add bot message immediately
 
       // ------------------- SAVE USER & BOT MESSAGES -------------------
       await fetch(`${API_URL}/api/chats`, {
@@ -76,8 +78,6 @@ const AssistantView = ({ user, settings }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.uid, text: botText, sender: 'bot' })
       });
-
-      fetchChats();
 
     } catch (error) {
       console.error("Send Error:", error);
@@ -104,6 +104,7 @@ const AssistantView = ({ user, settings }) => {
     } catch (err) { alert("Failed to delete history."); }
   };
 
+  // ------------------- UI -------------------
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6 pb-64 scrollbar-hide w-full max-w-5xl mx-auto">
