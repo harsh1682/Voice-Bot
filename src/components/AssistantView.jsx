@@ -65,13 +65,13 @@ const AssistantView = ({ user, settings }) => {
       speakText(botText, settings);
 
       // ------------------- SAVE USER & BOT MESSAGES -------------------
-      await fetch(API_URL, {
+      await fetch(`${API_URL}/api/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.uid, text: messageText, sender: 'user' })
       });
 
-      await fetch(API_URL, {
+      await fetch(`${API_URL}/api/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.uid, text: botText, sender: 'bot' })
@@ -99,7 +99,7 @@ const AssistantView = ({ user, settings }) => {
   const clearHistory = async () => {
     if (!user || !window.confirm("Clear history?")) return;
     try {
-      await fetch(`${API_URL}/${user.uid}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/api/chats/${user.uid}`, { method: 'DELETE' });
       setMessages([]);
     } catch (err) { alert("Failed to delete history."); }
   };
